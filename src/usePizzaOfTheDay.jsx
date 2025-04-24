@@ -6,9 +6,19 @@ export const usePizzaOfTheDay = () => {
 
   useEffect(() => {
     async function fetchPizzaOfTheDay() {
-      const response = await fetch("/api/pizza-of-the-day");
-      const data = await response.json();
-      setPizzaOfTheDay(data);
+      try {
+        // URL completa para o backend remoto na Railway
+        const response = await fetch("https://backend-padreginos-production.up.railway.app/api/pizza-of-the-day");
+
+        if (!response.ok) {
+          throw new Error("Erro ao buscar a pizza do dia");
+        }
+
+        const data = await response.json();
+        setPizzaOfTheDay(data);
+      } catch (error) {
+        console.error("Erro ao buscar a pizza do dia:", error);
+      }
     }
 
     fetchPizzaOfTheDay();

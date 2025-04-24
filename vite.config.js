@@ -4,21 +4,10 @@ import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 
 export default defineConfig({
   server: {
-    proxy: {
-      "/api": {
-        target: "http://localhost:3000",
-        changeOrigin: true
-      },
-      "/public": {
-        target: "http://localhost:3000",
-        changeOrigin: true
-      }
-    }
+    proxy: undefined, // Proxy removido, já que será consumido do backend remoto
   },
   plugins: [TanStackRouterVite(), react()],
   test: {
-    environment: "happy-dom",
+    environment: "happy-dom", // Configuração para ambiente de testes
   },
 });
-
-

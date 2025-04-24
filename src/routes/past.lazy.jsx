@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Suspense, use } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import getPastOrders from "../api/getPastOrders.js";
@@ -11,9 +11,27 @@ export const Route = createLazyFileRoute("/past")({
 });
 
 function ErrorBoundaryWrappedPastOrderRoutes() {
+  const [page, setPage] = useState(1);
+  const { data: loadedData, isLoading: isLoadingOrders } = useQuery({
+    queryKey: ["past-orders", page],
+    queryFn: () => getPastOrders(page),
+    staleTime: 30000,
+  });
+
   return (
     <ErrorBoundary>
-      <PastOrdersRoute />
+      <Suspense
+        fallback={<div className="past-orders">
+          <h2>Loading Past Order ...</h2>
+        </div>}
+      >
+        <PastOrdersRoute
+          loadedData={loadedData}
+          isLoadingOrders={isLoadingOrders}
+          page={page}
+          setPage={setPage}
+        />
+      </Suspense>
     </ErrorBoundary>
   );
 }
@@ -23,15 +41,8 @@ const intl = new Intl.NumberFormat("en-US", {
   currency: "USD",
 })
 
-function PastOrdersRoute() {
-  const [page, setPage] = useState(1);
+function PastOrdersRoute({ loadedData, isLoadingOrders, page, setPage }) {
   const [focusedOrder, setFocusedOrder] = useState();
-  const { isLoading, data } = useQuery({
-    queryKey: ["past-orders", page],
-    queryFn: () => getPastOrders(page),
-    staleTime: 30000,
-  });
-
   const { isLoading: isLoadingPastOrder, data: pastOrderData } = useQuery({
     queryKey: ["past-order", focusedOrder],
     queryFn: () => getPastOrder(focusedOrder),
@@ -39,7 +50,7 @@ function PastOrdersRoute() {
     staleTime: 24 * 60 * 60 * 1000,
   });
 
-  if (isLoading) {
+  if (isLoadingOrders) {
     return (
       <div className="past-orders">
         <h2>LOADING...</h2>
@@ -50,24 +61,24 @@ function PastOrdersRoute() {
     <div className="past-orders">
       <table>
         <thead>
-          <tr>
-            <td>ID</td>
-            <td>Date</td>
-            <td>Time</td>
-          </tr>
+        <tr>
+          <td>ID</td>
+          <td>Date</td>
+          <td>Time</td>
+        </tr>
         </thead>
         <tbody>
-          {data.map((order) => (
-            <tr key={order.order_id}>
-              <td>
-                <button onClick={() => setFocusedOrder(order.order_id)}>
-                  {order.order_id}
-                </button>
-              </td>
-              <td>{order.date}</td>
-              <td>{order.time}</td>
-            </tr>
-          ))}
+        {loadedData.map((order) => (
+          <tr key={order.order_id}>
+            <td>
+              <button onClick={() => setFocusedOrder(order.order_id)}>
+                {order.order_id}
+              </button>
+            </td>
+            <td>{order.date}</td>
+            <td>{order.time}</td>
+          </tr>
+        ))}
         </tbody>
       </table>
       <div className="pages">
@@ -75,17 +86,17 @@ function PastOrdersRoute() {
           Previous
         </button>
         <div>{page}</div>
-        <button disabled={data.length < 10} onClick={() => setPage(page + 1)}>
+        <button disabled={loadedData.length < 10} onClick={() => setPage(page + 1)}>
           Next
         </button>
       </div>
       {
         focusedOrder ? (
-        <Modal>
-          <h2>Order #{focusedOrder}</h2>
-          {!isLoadingPastOrder ? (
-            <table>
-              <thead>
+          <Modal>
+            <h2>Order #{focusedOrder}</h2>
+            {!isLoadingPastOrder ? (
+              <table>
+                <thead>
                 <tr>
                   <td>Image</td>
                   <td>Name</td>
@@ -94,8 +105,8 @@ function PastOrdersRoute() {
                   <td>Price</td>
                   <td>Total</td>
                 </tr>
-              </thead>
-              <tbody>
+                </thead>
+                <tbody>
                 {pastOrderData.orderItems.map((pizza) => (
                   <tr key={`${pizza.pizzaTypeId}_${pizza.size}`}>
                     <td>
@@ -108,14 +119,14 @@ function PastOrdersRoute() {
                     <td>{intl.format(pizza.total)}</td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-          ) : (
-            <p>Loading ...</p>
-          )}
-          <button onClick={() => setFocusedOrder()}>Close</button>
-        </Modal>
-      ) : null}
+                </tbody>
+              </table>
+            ) : (
+              <p>Loading ...</p>
+            )}
+            <button onClick={() => setFocusedOrder()}>Close</button>
+          </Modal>
+        ) : null}
     </div>
   );
 }
